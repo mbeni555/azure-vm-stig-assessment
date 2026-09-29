@@ -1,0 +1,12 @@
+{
+  "subscriptionId": "<subscription-id>",
+  "cloud": "AzureCloud",
+  "tagName": "Assessment",
+  "tagValue": "Enabled",
+  "storageAccount": "<storage-account-name>",
+  "fileShare": "<file-share-name>",
+  "packagePath": "<relative-path-to-reviewed-Evaluate-STIG.zip>",
+  "packageSha256": "<64-character-SHA-256-of-reviewed-ZIP>",
+  "resultsPrefix": "results",
+  "throttleLimit": 4
+}

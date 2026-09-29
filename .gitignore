@@ -1,0 +1,12 @@
+config.json
+*.log
+*.zip
+*.ckl
+*.xml
+*.csv
+*.jsonl
+results/
+output/
+*.env
+.env.*
+!.env.example
