@@ -20,6 +20,7 @@ This repository is an example architecture, not a pre-approved compliance assess
 |---|---|
 | `Invoke-AzureVMStigAssessment.ps1` | Self-contained orchestrator and guest scripts |
 | `config.example.json` | Placeholder configuration; contains no credentials |
+| `tests/Test-ControlFlow.ps1` | Local test of mixed VM outcomes using Azure command doubles |
 | `SECURITY.md` | Security model and disclosure guidance |
 | `LICENSE` | MIT license |
 
@@ -73,16 +74,24 @@ Each run creates a GUID and uploads under:
 <share>/<resultsPrefix>/<VM-name>/<run-id>/
 ```
 
-The script reports a per-VM status and fails the overall job if any guest does not report a completed upload. Existing results are retained. Review the Azure Run Command output and uploaded CKL files for each VM; successful transfer alone does not establish STIG compliance.
+The runbook emits one structured `VM` record per target and a final `Summary` record with succeeded and failed counts. A guest must report a completed upload to be counted as successful. **Individual VM failures are warnings and do not fail the overall runbook job**; discovery, configuration, and other orchestration failures still do. Existing results are retained. Review the Azure Run Command output and uploaded CKL files for each VM; successful transfer alone does not establish STIG compliance.
 
 ## Pilot checks
 
 1. Start with a small, deliberately tagged set containing one Windows and one Linux VM.
 2. Confirm that both guest identities can read the pinned ZIP and write to the results path using AzCopy without a SAS or storage key.
 3. Confirm the package's supported OS versions, required modules/data files, Evaluate-STIG flags, and CKL output structure.
-4. Confirm that failures in package download, scanning, and upload mark the run as failed.
+4. Confirm that package download, scan, and upload failures mark the affected VM as failed while other VMs continue and the job completes with a nonzero failed count.
 5. Confirm results appear under distinct run IDs and are readable only by authorized reviewers.
 6. Increase `throttleLimit` only after observing Run Command and Azure Files limits.
+
+The local control-flow test requires only PowerShell 7 and makes no Azure calls:
+
+```powershell
+pwsh -NoProfile -File ./tests/Test-ControlFlow.ps1
+```
+
+It checks that successful VMs are reported, failed VMs are counted without failing the job, a guest response without the upload marker is rejected, and invalid orchestration configuration still fails. It does not validate Azure Run Command or Evaluate-STIG behavior in a real VM.
 
 ## Design limits
 

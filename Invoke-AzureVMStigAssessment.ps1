@@ -28,6 +28,8 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+# Per-VM failures are reported as warnings and must not become job-level errors.
+$WarningPreference = 'Continue'
 
 function Assert-Value {
     param([object]$Value, [string]$Name, [string]$Pattern)
@@ -179,8 +181,8 @@ echo 'ASSESSMENT_RESULT=SUCCESS'
 Write-Output "Run ${runId}: dispatching $($targets.Count) VM(s)."
 $results = @($targets | ForEach-Object -Parallel {
     $target = $_
-    $destination = "$using:outputRoot/$([uri]::EscapeDataString($target.Name))/$using:runId"
     try {
+        $destination = "$using:outputRoot/$([uri]::EscapeDataString($target.Name))/$using:runId"
         if ($target.OsType -eq 'Windows') {
             $guestConfig = @{
                 aadEndpoint = $using:aadEndpoint
@@ -197,12 +199,23 @@ $results = @($targets | ForEach-Object -Parallel {
         }
         $guestOutput = (@($response.Value) | ForEach-Object { [string]$_.Message }) -join "`n"
         if ($guestOutput -notmatch 'ASSESSMENT_RESULT=SUCCESS') { throw 'Guest did not report a completed result upload; inspect Run Command output.' }
-        [pscustomobject]@{ VM = $target.Name; OS = $target.OsType; Status = 'Succeeded'; Detail = $destination }
+        [pscustomobject]@{ RecordType = 'VM'; RunId = $using:runId; VM = $target.Name; OS = $target.OsType; Status = 'Succeeded'; Detail = $destination }
     } catch {
-        [pscustomobject]@{ VM = $target.Name; OS = $target.OsType; Status = 'Failed'; Detail = $_.Exception.Message }
+        [pscustomobject]@{ RecordType = 'VM'; RunId = $using:runId; VM = $target.Name; OS = $target.OsType; Status = 'Failed'; Detail = $_.Exception.Message }
     }
 } -ThrottleLimit $throttle)
 
-$results | Sort-Object VM | Format-Table -AutoSize
 $failures = @($results | Where-Object Status -eq 'Failed')
-if ($failures.Count -gt 0) { throw "$($failures.Count) of $($targets.Count) VM assessments failed." }
+foreach ($result in ($results | Sort-Object VM)) {
+    if ($result.Status -eq 'Failed') {
+        Write-Warning "VM $($result.VM) failed: $($result.Detail)"
+    }
+    Write-Output $result
+}
+Write-Output ([pscustomobject]@{
+    RecordType = 'Summary'
+    RunId = $runId
+    Total = $targets.Count
+    Succeeded = $targets.Count - $failures.Count
+    Failed = $failures.Count
+})
