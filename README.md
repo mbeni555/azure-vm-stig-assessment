@@ -74,7 +74,7 @@ Each run creates a GUID and uploads under:
 <share>/<resultsPrefix>/<VM-name>/<run-id>/
 ```
 
-The runbook emits one structured `VM` record per target and a final `Summary` record with succeeded and failed counts. A guest must report a completed upload to be counted as successful. **Individual VM failures are warnings and do not fail the overall runbook job**; discovery, configuration, and other orchestration failures still do. Existing results are retained. Review the Azure Run Command output and uploaded CKL files for each VM; successful transfer alone does not establish STIG compliance.
+The runbook emits one structured `VM` record per target and a final `Summary` record with succeeded and failed counts. A guest must report a completed upload to be counted as successful. **Individual VM failures are warnings and do not fail the overall runbook job**; discovery, configuration, and other orchestration failures still do. Monitor `Summary.Failed` for alerts, because job status alone will not flag VM failures. Existing results are retained. Review the Azure Run Command output and uploaded CKL files for each VM; successful transfer alone does not establish STIG compliance.
 
 ## Pilot checks
 
